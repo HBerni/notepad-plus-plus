@@ -54,6 +54,8 @@ COLORREF TabBarPlus::_inactiveBgColour = RGB(192, 192, 192);
 HWND TabBarPlus::_hwndArray[nbCtrlMax] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 int TabBarPlus::_nbCtrl = 0;
 
+bool TabBarPlus::_redrawingHighlights = false;
+
 void TabBar::init(HINSTANCE hInst, HWND parent, bool isVertical, bool isTraditional, bool isMultiLine)
 {
 	Window::init(hInst, parent);
@@ -689,7 +691,9 @@ LRESULT TabBarPlus::runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 		}
 		case WM_TIMER:
 		{
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+			_redrawingHighlights = true;
+			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+			_redrawingHighlights = false;
 			return TRUE;
 		}
 	}
@@ -722,6 +726,11 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT *pDrawItemStruct)
 		::MessageBox(NULL, TEXT("! TCM_GETITEM"), TEXT(""), MB_OK);
 	}
 	HDC hDC = pDrawItemStruct->hDC;
+	
+	DWORD isHighlighted = tci.dwState & TCIS_HIGHLIGHTED;
+
+	if (_redrawingHighlights && isHighlighted == 0)
+		return;
 
 	int nSavedDC = ::SaveDC(hDC);
 
@@ -803,7 +812,6 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT *pDrawItemStruct)
 		{
 			SYSTEMTIME time;
 			GetSystemTime(&time);
-			DWORD isHighlighted = tci.dwState & TCIS_HIGHLIGHTED;
 
 			COLORREF color = isHighlighted ? (time.wSecond%2==0 ? _inactiveBgColour : 0xffff) : _inactiveBgColour;
 			hBrush = ::CreateSolidBrush(color);
